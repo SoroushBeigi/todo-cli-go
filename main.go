@@ -157,11 +157,22 @@ func runCommand(cmd string) {
 		userLogin()
 	case "create-task":
 		createTask()
+	case "list-task":
+		listTask()
 	case "create-category":
 		createCategory()
 	case "exit":
 		os.Exit(0)
 	default:
 		fmt.Println("command not valid: ", cmd)
+	}
+}
+
+func listTask() {
+	for i, task := range taskStorage {
+		if task.UserID == authenticatedUser.ID {
+			fmt.Printf("Task #%v: %+v\n", i, task)
+		}
+
 	}
 }
