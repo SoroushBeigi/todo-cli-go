@@ -15,7 +15,17 @@ type User struct {
 	Name     string
 }
 
+type Task struct {
+	ID       int
+	UserID   int
+	Title    string
+	DueDate  string
+	Category string
+	IsDone   bool
+}
+
 var userStorage []User
+var taskStorage []Task
 var authenticatedUser *User
 
 func main() {
@@ -35,11 +45,11 @@ func main() {
 
 func createTask() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var name, dueDate, category string
+	var title, dueDate, category string
 
 	fmt.Println("enter task title")
 	scanner.Scan()
-	name = scanner.Text()
+	title = scanner.Text()
 
 	fmt.Println("enter due date")
 	scanner.Scan()
@@ -49,7 +59,19 @@ func createTask() {
 	scanner.Scan()
 	category = scanner.Text()
 
-	fmt.Println("task: ", name, category, dueDate)
+	if authenticatedUser != nil {
+		task := Task{
+			ID:       len(taskStorage) + 1,
+			UserID:   authenticatedUser.ID,
+			IsDone:   false,
+			Title:    title,
+			Category: category,
+			DueDate:  dueDate,
+		}
+
+		taskStorage = append(taskStorage, task)
+	}
+
 }
 func createCategory() {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -88,8 +110,6 @@ func userLogin() {
 	}
 	if authenticatedUser == nil {
 		fmt.Println("Incorrect email or password")
-
-		return
 	}
 
 	fmt.Println("user login: ", email, password)
@@ -125,7 +145,11 @@ func userRegister() {
 func runCommand(cmd string) {
 	if cmd != "user-register" && cmd != "exit" && authenticatedUser == nil {
 		userLogin()
+		if authenticatedUser == nil {
+			return
+		}
 	}
+
 	switch cmd {
 	case "user-register":
 		userRegister()
