@@ -16,36 +16,15 @@ type User struct {
 }
 
 var userStorage []User
+var authenticatedUser User
 
 func main() {
 	fmt.Println("TODO start")
 	command := flag.String("command", "no command", "command to run")
 	flag.Parse()
 
-	scn := bufio.NewScanner(os.Stdin)
+	if *command != "user-register" && *command != "exit" {
 
-	fmt.Println("please enter the email")
-	scn.Scan()
-	email := scn.Text()
-
-	fmt.Println("please enter the password")
-	scn.Scan()
-	password := scn.Text()
-
-	found := false
-	for _, user := range userStorage {
-		if strings.EqualFold(email, user.Email) {
-			if password == user.Password {
-				fmt.Println("You are logged in!")
-				found = true
-			} else {
-				fmt.Println("Incorrect Password!")
-			}
-		}
-	}
-	if !found {
-		fmt.Println("Incorrect email or password")
-		return
 	}
 
 	for {
@@ -56,7 +35,6 @@ func main() {
 		*command = scanner.Text()
 	}
 
-	fmt.Printf("user storage: %+v\n", userStorage)
 }
 
 func createTask() {
@@ -102,6 +80,20 @@ func userLogin() {
 	fmt.Println("enter user password")
 	scanner.Scan()
 	password = scanner.Text()
+
+	found := false
+	for _, user := range userStorage {
+		if strings.EqualFold(email, user.Email) && password == user.Password {
+			fmt.Println("You are logged in!")
+			found = true
+			authenticatedUser = user
+		}
+
+	}
+	if !found {
+		fmt.Println("Incorrect email or password")
+		return
+	}
 
 	fmt.Println("user login: ", id, email, password)
 }
