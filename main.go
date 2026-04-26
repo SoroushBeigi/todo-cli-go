@@ -5,12 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type User struct {
 	ID       int
 	Email    string
 	Password string
+	Name     string
 }
 
 var userStorage []User
@@ -19,6 +21,33 @@ func main() {
 	fmt.Println("TODO start")
 	command := flag.String("command", "no command", "command to run")
 	flag.Parse()
+
+	scn := bufio.NewScanner(os.Stdin)
+
+	fmt.Println("please enter the email")
+	scn.Scan()
+	email := scn.Text()
+
+	fmt.Println("please enter the password")
+	scn.Scan()
+	password := scn.Text()
+
+	found := false
+	for _, user := range userStorage {
+		if strings.EqualFold(email, user.Email) {
+			if password == user.Password {
+				fmt.Println("You are logged in!")
+				found = true
+			} else {
+				fmt.Println("Incorrect Password!")
+			}
+		}
+	}
+	if !found {
+		fmt.Println("Incorrect email or password")
+		return
+	}
+
 	for {
 		runCommand(*command)
 		scanner := bufio.NewScanner(os.Stdin)
@@ -78,7 +107,11 @@ func userLogin() {
 }
 func userRegister() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var email, password string
+	var email, password, name string
+
+	fmt.Println("enter your name")
+	scanner.Scan()
+	name = scanner.Text()
 
 	fmt.Println("enter user email")
 	scanner.Scan()
@@ -90,12 +123,13 @@ func userRegister() {
 
 	id := len(userStorage) + 1
 
-	fmt.Println("user: ", id, email, password)
+	fmt.Println("user: ", id, email, password, name)
 
 	user := User{
 		ID:       id,
 		Email:    email,
 		Password: password,
+		Name:     name,
 	}
 	userStorage = append(userStorage, user)
 }
