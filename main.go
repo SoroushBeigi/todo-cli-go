@@ -1,0 +1,117 @@
+package main
+
+import (
+	"bufio"
+	"flag"
+	"fmt"
+	"os"
+)
+
+type User struct {
+	ID       int
+	Email    string
+	Password string
+}
+
+var userStorage []User
+
+func main() {
+	fmt.Println("TODO start")
+	command := flag.String("command", "no command", "command to run")
+	flag.Parse()
+	for {
+		runCommand(*command)
+		scanner := bufio.NewScanner(os.Stdin)
+		fmt.Println("Please enter the next command")
+		scanner.Scan()
+		*command = scanner.Text()
+	}
+
+	fmt.Printf("user storage: %+v\n", userStorage)
+}
+
+func createTask() {
+	scanner := bufio.NewScanner(os.Stdin)
+	var name, dueDate, category string
+
+	fmt.Println("enter task title")
+	scanner.Scan()
+	name = scanner.Text()
+
+	fmt.Println("enter due date")
+	scanner.Scan()
+	dueDate = scanner.Text()
+
+	fmt.Println("enter task category")
+	scanner.Scan()
+	category = scanner.Text()
+
+	fmt.Println("task: ", name, category, dueDate)
+}
+func createCategory() {
+	scanner := bufio.NewScanner(os.Stdin)
+	var catColor, catName string
+
+	fmt.Println("enter category name")
+	scanner.Scan()
+	catName = scanner.Text()
+
+	fmt.Println("enter category color")
+	scanner.Scan()
+	catColor = scanner.Text()
+
+	fmt.Println("category: ", catName, catColor)
+}
+func userLogin() {
+	scanner := bufio.NewScanner(os.Stdin)
+	var id, email, password string
+
+	fmt.Println("enter user email")
+	scanner.Scan()
+	email = scanner.Text()
+
+	fmt.Println("enter user password")
+	scanner.Scan()
+	password = scanner.Text()
+
+	fmt.Println("user login: ", id, email, password)
+}
+func userRegister() {
+	scanner := bufio.NewScanner(os.Stdin)
+	var email, password string
+
+	fmt.Println("enter user email")
+	scanner.Scan()
+	email = scanner.Text()
+
+	fmt.Println("enter user password")
+	scanner.Scan()
+	password = scanner.Text()
+
+	id := len(userStorage) + 1
+
+	fmt.Println("user: ", id, email, password)
+
+	user := User{
+		ID:       id,
+		Email:    email,
+		Password: password,
+	}
+	userStorage = append(userStorage, user)
+}
+func runCommand(cmd string) {
+	switch cmd {
+	case "user-register":
+		userRegister()
+	case "user-login":
+		userLogin()
+	case "create-task":
+		createTask()
+	case "create-category":
+		createCategory()
+	case "exit":
+		os.Exit(0)
+	default:
+		fmt.Println("command not valid: ", cmd)
+	}
+}
