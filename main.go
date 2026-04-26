@@ -16,16 +16,12 @@ type User struct {
 }
 
 var userStorage []User
-var authenticatedUser User
+var authenticatedUser *User
 
 func main() {
 	fmt.Println("TODO start")
 	command := flag.String("command", "no command", "command to run")
 	flag.Parse()
-
-	if *command != "user-register" && *command != "exit" {
-
-	}
 
 	for {
 		runCommand(*command)
@@ -71,7 +67,7 @@ func createCategory() {
 }
 func userLogin() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var id, email, password string
+	var email, password string
 
 	fmt.Println("enter user email")
 	scanner.Scan()
@@ -81,21 +77,22 @@ func userLogin() {
 	scanner.Scan()
 	password = scanner.Text()
 
-	found := false
 	for _, user := range userStorage {
 		if strings.EqualFold(email, user.Email) && password == user.Password {
 			fmt.Println("You are logged in!")
-			found = true
-			authenticatedUser = user
+			authenticatedUser = &user
+
+			break
 		}
 
 	}
-	if !found {
+	if authenticatedUser == nil {
 		fmt.Println("Incorrect email or password")
+
 		return
 	}
 
-	fmt.Println("user login: ", id, email, password)
+	fmt.Println("user login: ", email, password)
 }
 func userRegister() {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -126,6 +123,9 @@ func userRegister() {
 	userStorage = append(userStorage, user)
 }
 func runCommand(cmd string) {
+	if cmd != "user-register" && cmd != "exit" && authenticatedUser == nil {
+		userLogin()
+	}
 	switch cmd {
 	case "user-register":
 		userRegister()
