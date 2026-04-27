@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -16,16 +17,24 @@ type User struct {
 }
 
 type Task struct {
-	ID       int
-	UserID   int
-	Title    string
-	DueDate  string
-	Category string
-	IsDone   bool
+	ID         int
+	UserID     int
+	Title      string
+	DueDate    string
+	CategoryID int
+	IsDone     bool
+}
+
+type Category struct {
+	ID     int
+	Title  string
+	Color  string
+	UserID int
 }
 
 var userStorage []User
 var taskStorage []Task
+var categoryStorage []Category
 var authenticatedUser *User
 
 func main() {
@@ -45,7 +54,7 @@ func main() {
 
 func createTask() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var title, dueDate, category string
+	var title, dueDate string
 
 	fmt.Println("enter task title")
 	scanner.Scan()
@@ -55,37 +64,64 @@ func createTask() {
 	scanner.Scan()
 	dueDate = scanner.Text()
 
-	fmt.Println("enter task category")
+	fmt.Println("enter the category id")
 	scanner.Scan()
-	category = scanner.Text()
+	categoryId, err := strconv.Atoi(scanner.Text())
+	if err != nil {
+		fmt.Printf("Category ID is not a valid integer: %v\n", err)
+
+		return
+	}
+
+	found := false
+	for _, c := range categoryStorage {
+		if c.ID == categoryId && c.UserID == authenticatedUser.ID {
+			found = true
+
+			break
+		}
+	}
+
+	if !found {
+		fmt.Println("Category ID is not defined for User")
+
+		return
+	}
 
 	if authenticatedUser != nil {
-		task := Task{
-			ID:       len(taskStorage) + 1,
-			UserID:   authenticatedUser.ID,
-			IsDone:   false,
-			Title:    title,
-			Category: category,
-			DueDate:  dueDate,
+		t := Task{
+			ID:         len(taskStorage) + 1,
+			UserID:     authenticatedUser.ID,
+			IsDone:     false,
+			Title:      title,
+			CategoryID: categoryId,
+			DueDate:    dueDate,
 		}
 
-		taskStorage = append(taskStorage, task)
+		taskStorage = append(taskStorage, t)
 	}
 
 }
 func createCategory() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var catColor, catName string
+	var title, color string
 
 	fmt.Println("enter category name")
 	scanner.Scan()
-	catName = scanner.Text()
+	title = scanner.Text()
 
 	fmt.Println("enter category color")
 	scanner.Scan()
-	catColor = scanner.Text()
+	color = scanner.Text()
 
-	fmt.Println("category: ", catName, catColor)
+	c := Category{
+		ID:     len(categoryStorage) + 1,
+		Title:  title,
+		Color:  color,
+		UserID: authenticatedUser.ID,
+	}
+
+	categoryStorage = append(categoryStorage, c)
 }
 func userLogin() {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -134,13 +170,13 @@ func userRegister() {
 
 	fmt.Println("user: ", id, email, password, name)
 
-	user := User{
+	u := User{
 		ID:       id,
 		Email:    email,
 		Password: password,
 		Name:     name,
 	}
-	userStorage = append(userStorage, user)
+	userStorage = append(userStorage, u)
 }
 func runCommand(cmd string) {
 	if cmd != "user-register" && cmd != "exit" && authenticatedUser == nil {
@@ -173,6 +209,5 @@ func listTask() {
 		if task.UserID == authenticatedUser.ID {
 			fmt.Printf("Task #%v: %+v\n", i, task)
 		}
-
 	}
 }
