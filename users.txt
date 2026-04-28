@@ -1,1 +1,1 @@
-id: 1, name: Soroush, email: sbeygi, password: sasa
+{"ID":1,"Email":"sbeygi","Password":"sasa","Name":"Soroush"}

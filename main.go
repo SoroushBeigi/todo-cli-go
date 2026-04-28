@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -32,18 +33,35 @@ type Category struct {
 	UserID int
 }
 
-var userStorage []User
-var taskStorage []Task
-var categoryStorage []Category
-var authenticatedUser *User
+var (
+	userStorage       []User
+	taskStorage       []Task
+	categoryStorage   []Category
+	authenticatedUser *User
+	serializationMode string
+)
 
-const userStoragePath = "users.txt"
+const (
+	userStoragePath = "users.txt"
+	ManualMode      = "manual"
+	JsonMode        = "json"
+)
 
 func main() {
-	initStorage()
+
 	fmt.Println("TODO start")
 	command := flag.String("command", "no command", "command to run")
+	sm := flag.String("serialization", ManualMode, "how application writes data to file")
 	flag.Parse()
+
+	switch *sm {
+	case ManualMode:
+		serializationMode = ManualMode
+	default:
+		serializationMode = JsonMode
+	}
+
+	initStorage(serializationMode)
 
 	for {
 		runCommand(*command)
@@ -55,7 +73,7 @@ func main() {
 
 }
 
-func initStorage() {
+func initStorage(sm string) {
 	data, err := os.ReadFile(userStoragePath)
 	if err != nil {
 
@@ -70,49 +88,70 @@ func initStorage() {
 	users := strings.Split(dataStr, "\n")
 
 	for _, uRow := range users {
-		uRow = strings.TrimSpace(uRow)
-		if uRow == "" {
-			continue
+		var userStruct = User{}
+		switch sm {
+		case ManualMode:
+			userStruct, err = manualDecode(uRow)
+			if err != nil {
+				fmt.Println("cannot decode user: ", err)
+
+				return
+			}
+		case JsonMode:
+			err = json.Unmarshal([]byte(uRow), &userStruct)
+			if err != nil {
+				fmt.Println("cannot decode in json mode: ", err)
+
+				return
+			}
 		}
 
-		userFields := strings.Split(uRow, ",")
-		user := User{}
-		for _, field := range userFields {
-			field = strings.TrimSpace(field)
-			content := strings.Split(field, ": ")
-			if len(content) < 2 {
-
-				continue
-			}
-			fieldName := content[0]
-			fieldValue := content[1]
-
-			switch fieldName {
-			case "id":
-				id, err := strconv.Atoi(fieldValue)
-				if err != nil {
-					fmt.Println("ERROR: ", err)
-
-					continue
-				}
-				user.ID = id
-				break
-			case "name":
-				user.Name = fieldValue
-				break
-			case "email":
-				user.Email = fieldValue
-				break
-			case "password":
-				user.Password = fieldValue
-				break
-			}
-
-		}
-		userStorage = append(userStorage, user)
-		fmt.Printf("%+v\n", user)
+		userStorage = append(userStorage, userStruct)
 	}
 
+}
+
+func manualDecode(uRow string) (User, error) {
+	uRow = strings.TrimSpace(uRow)
+	if uRow == "" {
+		return User{}, fmt.Errorf("Empty user")
+	}
+
+	userFields := strings.Split(uRow, ",")
+	user := User{}
+	for _, field := range userFields {
+		field = strings.TrimSpace(field)
+		content := strings.Split(field, ": ")
+		if len(content) < 2 {
+
+			return User{}, fmt.Errorf("content length <2")
+		}
+		fieldName := content[0]
+		fieldValue := content[1]
+
+		switch fieldName {
+		case "id":
+			id, err := strconv.Atoi(fieldValue)
+			if err != nil {
+				return User{}, fmt.Errorf("str convert error")
+			}
+			user.ID = id
+			break
+		case "name":
+			user.Name = fieldValue
+			break
+		case "email":
+			user.Email = fieldValue
+			break
+		case "password":
+			user.Password = fieldValue
+			break
+		}
+
+	}
+	userStorage = append(userStorage, user)
+	fmt.Printf("%+v\n", user)
+	return user, nil
 }
 
 func createTask() {
@@ -257,7 +296,27 @@ func writeUserToFile(u User) {
 
 	defer file.Close()
 
-	data := fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", u.ID, u.Name, u.Email, u.Password)
+	var data []byte
+	if serializationMode == ManualMode {
+		data = []byte(fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", u.ID, u.Name, u.Email, u.Password))
+	} else if serializationMode == JsonMode {
+		data, err = json.Marshal(u)
+		if err != nil {
+			fmt.Println("cannot encode user to json:", err)
+
+			return
+		}
+
+		dataStr := string(data)
+		dataStr += "\n"
+
+		data = []byte(dataStr)
+
+	} else {
+		fmt.Printf("Invalid serialization mode: %v\n", serializationMode)
+
+		return
+	}
 
 	_, err = file.Write([]byte(data))
 	if err != nil {
