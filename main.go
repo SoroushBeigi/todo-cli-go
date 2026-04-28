@@ -37,7 +37,10 @@ var taskStorage []Task
 var categoryStorage []Category
 var authenticatedUser *User
 
+const userStoragePath = "users.txt"
+
 func main() {
+	initStorage()
 	fmt.Println("TODO start")
 	command := flag.String("command", "no command", "command to run")
 	flag.Parse()
@@ -48,6 +51,66 @@ func main() {
 		fmt.Println("Please enter the next command")
 		scanner.Scan()
 		*command = scanner.Text()
+	}
+
+}
+
+func initStorage() {
+	data, err := os.ReadFile(userStoragePath)
+	if err != nil {
+
+		if os.IsNotExist(err) {
+			return
+		}
+		fmt.Println("cannot read file: ", err)
+		return
+	}
+
+	dataStr := string(data)
+	users := strings.Split(dataStr, "\n")
+
+	for _, uRow := range users {
+		uRow = strings.TrimSpace(uRow)
+		if uRow == "" {
+			continue
+		}
+
+		userFields := strings.Split(uRow, ",")
+		user := User{}
+		for _, field := range userFields {
+			field = strings.TrimSpace(field)
+			content := strings.Split(field, ": ")
+			if len(content) < 2 {
+
+				continue
+			}
+			fieldName := content[0]
+			fieldValue := content[1]
+
+			switch fieldName {
+			case "id":
+				id, err := strconv.Atoi(fieldValue)
+				if err != nil {
+					fmt.Println("ERROR: ", err)
+
+					continue
+				}
+				user.ID = id
+				break
+			case "name":
+				user.Name = fieldValue
+				break
+			case "email":
+				user.Email = fieldValue
+				break
+			case "password":
+				user.Password = fieldValue
+				break
+			}
+
+		}
+		userStorage = append(userStorage, user)
+		fmt.Printf("%+v\n", user)
 	}
 
 }
@@ -177,6 +240,29 @@ func userRegister() {
 		Name:     name,
 	}
 	userStorage = append(userStorage, u)
+
+	writeUserToFile(u)
+
+}
+
+func writeUserToFile(u User) {
+	_, err := os.Stat(userStoragePath)
+
+	file, err := os.OpenFile(userStoragePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("cannot create or open file: ", err)
+
+		return
+	}
+
+	defer file.Close()
+
+	data := fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", u.ID, u.Name, u.Email, u.Password)
+
+	_, err = file.Write([]byte(data))
+	if err != nil {
+		fmt.Println("Error writing file: ", err)
+	}
 }
 func runCommand(cmd string) {
 	if cmd != "user-register" && cmd != "exit" && authenticatedUser == nil {
