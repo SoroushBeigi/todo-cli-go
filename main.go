@@ -63,7 +63,7 @@ func main() {
 		serializationMode = JsonMode
 	}
 
-	loadUserFromStorage(&fileStore{filePath: "./store/data.txt"}, serializationMode)
+	loadUserFromStorage(&fileStore{filePath: userStoragePath}, serializationMode)
 
 	for {
 		runCommand(*command)
@@ -234,12 +234,12 @@ type fileStore struct {
 }
 
 func (fs *fileStore) Save(u User) {
-	writeUserToFile(u)
+	writeUserToFile(u, fs.filePath)
 }
 
 func (fs *fileStore) Load(sm string) []User {
 	var uStore []User
-	data, err := os.ReadFile(userStoragePath)
+	data, err := os.ReadFile(fs.filePath)
 	if err != nil {
 
 		if os.IsNotExist(err) {
@@ -312,10 +312,10 @@ func hashPassword(password string) string {
 
 }
 
-func writeUserToFile(u User) {
-	_, err := os.Stat(userStoragePath)
+func writeUserToFile(u User, filePath string) {
+	_, err := os.Stat(filePath)
 
-	file, err := os.OpenFile(userStoragePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("cannot create or open file: ", err)
 
@@ -361,7 +361,7 @@ func runCommand(cmd string) {
 
 	switch cmd {
 	case "user-register":
-		userRegister(&fileStore{filePath: "./store/users.txt"})
+		userRegister(&fileStore{filePath: userStoragePath})
 	case "user-login":
 		userLogin()
 	case "create-task":
