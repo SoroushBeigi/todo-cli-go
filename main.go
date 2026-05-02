@@ -63,12 +63,7 @@ func main() {
 		serializationMode = JsonMode
 	}
 
-	var userReadFileStore userReadStore
-	var userReadStore = fileStore{filePath: "./store/data.txt"}
-
-	userReadFileStore = &userReadStore
-
-	loadUserFromStorage(userReadFileStore, serializationMode)
+	loadUserFromStorage(&fileStore{filePath: "./store/data.txt"}, serializationMode)
 
 	for {
 		runCommand(*command)
@@ -364,14 +359,9 @@ func runCommand(cmd string) {
 		}
 	}
 
-	var store userWriteStore
-
-	var userFileStore = fileStore{filePath: "./store/users.txt"}
-	store = &userFileStore
-
 	switch cmd {
 	case "user-register":
-		userRegister(store)
+		userRegister(&fileStore{filePath: "./store/users.txt"})
 	case "user-login":
 		userLogin()
 	case "create-task":
