@@ -63,7 +63,12 @@ func main() {
 		serializationMode = JsonMode
 	}
 
-	initStorage(serializationMode)
+	var userReadFileStore userReadStore
+	var userReadStore = fileStore{filePath: "./store/data.txt"}
+
+	userReadFileStore = &userReadStore
+
+	loadUserFromStorage(userReadFileStore, serializationMode)
 
 	for {
 		runCommand(*command)
@@ -74,43 +79,9 @@ func main() {
 	}
 
 }
-
-func initStorage(sm string) {
-	data, err := os.ReadFile(userStoragePath)
-	if err != nil {
-
-		if os.IsNotExist(err) {
-			return
-		}
-		fmt.Println("cannot read file: ", err)
-		return
-	}
-
-	dataStr := string(data)
-	users := strings.Split(dataStr, "\n")
-
-	for _, uRow := range users {
-		var userStruct = User{}
-		switch sm {
-		case ManualMode:
-			userStruct, err = manualDecode(uRow)
-			if err != nil {
-				fmt.Println("cannot decode user: ", err)
-
-				return
-			}
-		case JsonMode:
-			err = json.Unmarshal([]byte(uRow), &userStruct)
-			if err != nil {
-				fmt.Println("cannot decode in json mode: ", err)
-
-				return
-			}
-		}
-
-		userStorage = append(userStorage, userStruct)
-	}
-
+func loadUserFromStorage(store userReadStore, sm string) {
+	users := store.Load(sm)
+	userStorage = append(userStorage, users...)
 }
 
 func manualDecode(uRow string) (User, error) {
@@ -254,7 +225,62 @@ func userLogin() {
 
 	fmt.Println("user login: ", email, password)
 }
-func userRegister() {
+
+type userWriteStore interface {
+	Save(u User)
+}
+
+type userReadStore interface {
+	Load(serializeMode string) []User
+}
+
+type fileStore struct {
+	filePath string
+}
+
+func (fs *fileStore) Save(u User) {
+	writeUserToFile(u)
+}
+
+func (fs *fileStore) Load(sm string) []User {
+	var uStore []User
+	data, err := os.ReadFile(userStoragePath)
+	if err != nil {
+
+		if os.IsNotExist(err) {
+			return nil
+		}
+		fmt.Println("cannot read file: ", err)
+		return nil
+	}
+
+	dataStr := string(data)
+	users := strings.Split(dataStr, "\n")
+
+	for _, uRow := range users {
+		var userStruct = User{}
+		switch sm {
+		case ManualMode:
+			userStruct, err = manualDecode(uRow)
+			if err != nil {
+				fmt.Println("cannot decode user: ", err)
+
+				return nil
+			}
+		case JsonMode:
+			err = json.Unmarshal([]byte(uRow), &userStruct)
+			if err != nil {
+				fmt.Println("cannot decode in json mode: ", err)
+
+				return nil
+			}
+		}
+		uStore = append(uStore, userStruct)
+	}
+	return uStore
+}
+
+func userRegister(store userWriteStore) {
 	scanner := bufio.NewScanner(os.Stdin)
 	var email, password, name string
 
@@ -280,7 +306,7 @@ func userRegister() {
 	}
 	userStorage = append(userStorage, u)
 
-	writeUserToFile(u)
+	store.Save(u)
 
 }
 
@@ -338,9 +364,14 @@ func runCommand(cmd string) {
 		}
 	}
 
+	var store userWriteStore
+
+	var userFileStore = fileStore{filePath: "./store/users.txt"}
+	store = &userFileStore
+
 	switch cmd {
 	case "user-register":
-		userRegister()
+		userRegister(store)
 	case "user-login":
 		userLogin()
 	case "create-task":
