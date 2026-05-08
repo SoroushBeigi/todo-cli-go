@@ -13,29 +13,15 @@ import (
 	"github.com/SoroushBeigi/todo-cli-go/constant"
 	"github.com/SoroushBeigi/todo-cli-go/contract"
 	"github.com/SoroushBeigi/todo-cli-go/entity"
-	"github.com/SoroushBeigi/todo-cli-go/filestore"
+	"github.com/SoroushBeigi/todo-cli-go/repository/filestore"
+	"github.com/SoroushBeigi/todo-cli-go/repository/memorystore"
+	"github.com/SoroushBeigi/todo-cli-go/service/task"
 )
-
-type Task struct {
-	ID         int
-	UserID     int
-	Title      string
-	DueDate    string
-	CategoryID int
-	IsDone     bool
-}
-
-type Category struct {
-	ID     int
-	Title  string
-	Color  string
-	UserID int
-}
 
 var (
 	userStorage       []entity.User
-	taskStorage       []Task
-	categoryStorage   []Category
+	taskService       task.Service
+	categoryStorage   []entity.Category
 	authenticatedUser *entity.User
 	serializationMode string
 )
@@ -43,6 +29,10 @@ var (
 const userStoragePath = "users.txt"
 
 func main() {
+
+	taskMemoryRepo := memorystore.NewTaskStore()
+
+	taskService := task.NewService(taskMemoryRepo)
 
 	fmt.Println("TODO start")
 	command := flag.String("command", "no command", "command to run")
@@ -62,7 +52,7 @@ func main() {
 	userStorage = append(userStorage, users...)
 
 	for {
-		runCommand(userFileStore, *command)
+		runCommand(userFileStore, *command, &taskService)
 		scanner := bufio.NewScanner(os.Stdin)
 		fmt.Println("Please enter the next command")
 		scanner.Scan()
@@ -71,7 +61,7 @@ func main() {
 
 }
 
-func createTask() {
+func createTask(taskService *task.Service) {
 	scanner := bufio.NewScanner(os.Stdin)
 	var title, dueDate string
 
@@ -107,20 +97,34 @@ func createTask() {
 		return
 	}
 
-	if authenticatedUser != nil {
-		t := Task{
-			ID:         len(taskStorage) + 1,
-			UserID:     authenticatedUser.ID,
-			IsDone:     false,
-			Title:      title,
-			CategoryID: categoryId,
-			DueDate:    dueDate,
-		}
+	res, err := taskService.CreateNewTask(task.CreateRequest{
+		UserID:     authenticatedUser.ID,
+		Title:      title,
+		CategoryID: categoryId,
+		DueDate:    dueDate,
+	})
 
-		taskStorage = append(taskStorage, t)
+	if err != nil {
+		fmt.Println("error", err)
+
+		return
 	}
 
+	fmt.Println("Created task", res.Task)
+
 }
+
+func listTask(taskService *task.Service) {
+	tasks, err := taskService.List(task.ListRequest{UserID: authenticatedUser.ID})
+	if err != nil {
+		fmt.Println("error", err)
+
+		return
+	}
+	fmt.Println("User Tasks:")
+	fmt.Println(tasks)
+}
+
 func createCategory() {
 	scanner := bufio.NewScanner(os.Stdin)
 	var title, color string
@@ -133,7 +137,7 @@ func createCategory() {
 	scanner.Scan()
 	color = scanner.Text()
 
-	c := Category{
+	c := entity.Category{
 		ID:     len(categoryStorage) + 1,
 		Title:  title,
 		Color:  color,
@@ -207,7 +211,7 @@ func hashPassword(password string) string {
 
 }
 
-func runCommand(userFileStore filestore.FileStore, cmd string) {
+func runCommand(userFileStore filestore.FileStore, cmd string, taskService *task.Service) {
 	if cmd != "user-register" && cmd != "exit" && authenticatedUser == nil {
 		userLogin()
 		if authenticatedUser == nil {
@@ -221,22 +225,14 @@ func runCommand(userFileStore filestore.FileStore, cmd string) {
 	case "user-login":
 		userLogin()
 	case "create-task":
-		createTask()
+		createTask(taskService)
 	case "list-task":
-		listTask()
+		listTask(taskService)
 	case "create-category":
 		createCategory()
 	case "exit":
 		os.Exit(0)
 	default:
 		fmt.Println("command not valid: ", cmd)
-	}
-}
-
-func listTask() {
-	for i, task := range taskStorage {
-		if task.UserID == authenticatedUser.ID {
-			fmt.Printf("Task #%v: %+v\n", i, task)
-		}
 	}
 }
