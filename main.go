@@ -14,7 +14,6 @@ import (
 	"github.com/SoroushBeigi/todo-cli-go/contract"
 	"github.com/SoroushBeigi/todo-cli-go/entity"
 	"github.com/SoroushBeigi/todo-cli-go/repository/filestore"
-	"github.com/SoroushBeigi/todo-cli-go/repository/memorystore"
 	"github.com/SoroushBeigi/todo-cli-go/service/task"
 )
 
@@ -30,9 +29,7 @@ const userStoragePath = "users.txt"
 
 func main() {
 
-	taskMemoryRepo := memorystore.NewTaskStore()
-
-	taskService := task.NewService(taskMemoryRepo)
+	
 
 	fmt.Println("TODO start")
 	command := flag.String("command", "no command", "command to run")
